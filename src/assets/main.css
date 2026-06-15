@@ -1,0 +1,50 @@
+/* ===== CSS 变量（默认 vintage 主题） ===== */
+:root {
+  --paper: #f4f1eb;
+  --paper-deep: #ece7dd;
+  --ink: #2f2a22;
+  --ink-soft: #8b8579;
+  --line: #d5cfc4;
+  --line-strong: #8b7355;
+  --accent: #8b7355;
+  --close-hover: #8c3b2e;
+  --font-body: 'Noto Serif SC', 'Source Han Serif CN', Georgia, serif;
+  --font-annotation: 'Noto Serif SC', 'Source Han Serif CN', Georgia, serif;
+  --font-size-body: 15px;
+  --font-size-annotation: 14px;
+  --line-height-body: 2;
+  --color-annotation: #8b7355;
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body, #app {
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  transition: background 0.3s, color 0.3s;
+}
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  color: inherit;
+}
+a { color: inherit; text-decoration: none; }
+/* 通用小元素 */
+.fleuron { font-size: 18px; letter-spacing: 0.5em; color: var(--ink-soft); }
+.rule-thin { border: none; border-top: 1px solid var(--line); }
+.rule-double { border: none; border-top: 3px double var(--line-strong); }
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
+/* 选中文本 */
+::selection { background: var(--accent); color: var(--paper); }

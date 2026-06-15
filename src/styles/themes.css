@@ -1,0 +1,44 @@
+/* ===== 主题变量（默认 vintage） ===== */
+:root {
+  --paper: #f4f1eb;
+  --paper-deep: #ece7dd;
+  --ink: #2f2a22;
+  --ink-soft: #8b8579;
+  --line: #d5cfc4;
+  --line-strong: #8b7355;
+  --accent: #8b7355;
+  --close-hover: #8c3b2e;
+  --font-body: Georgia, "Source Han Serif SC", "Noto Serif SC", "SimSun", serif;
+  --font-annotation: var(--font-body);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #app {
+  height: 100%;
+}
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+button {
+  font-family: inherit;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+/* ===== 复古通用元素 ===== */
+.rule-double {
+  border: none;
+  border-top: 3px double var(--line-strong);
+}
+.rule-thin {
+  border: none;
+  border-top: 1px solid var(--line);
+}
+.fleuron {
+  text-align: center;
+  color: var(--ink-soft);
+  letter-spacing: 0.5em;
+  user-select: none;
+}
