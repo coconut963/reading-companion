@@ -15,6 +15,7 @@
         rows="6"
       ></textarea>
     </section>
+
     <!-- 用户面具 -->
     <section class="setting-section">
       <h3 class="section-title">用户面具</h3>
@@ -30,6 +31,7 @@
         rows="3"
       ></textarea>
     </section>
+
     <!-- 世界书 -->
     <section class="setting-section">
       <h3 class="section-title">世界书</h3>
@@ -47,14 +49,19 @@
       </div>
       <button class="add-btn" @click="addWbEntry">+ 新增条目</button>
     </section>
+
     <div class="save-row">
       <button class="action-btn primary" @click="save">保存</button>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getSetting, setSetting } from '../db/database.js'
+
+const emit = defineEmits(['saved'])
+
 const form = ref({
   personaName: '',
   persona: '',
@@ -62,21 +69,26 @@ const form = ref({
   userMask: '',
   worldBook: []
 })
+
 onMounted(async () => {
   const saved = await getSetting('personaSettings')
   if (saved) Object.assign(form.value, saved)
 })
+
 function addWbEntry() {
   form.value.worldBook.push({ name: '', content: '', enabled: true })
 }
+
 function removeWbEntry(idx) {
   form.value.worldBook.splice(idx, 1)
 }
+
 async function save() {
   await setSetting('personaSettings', { ...form.value, worldBook: [...form.value.worldBook] })
-  alert('角色设定已保存')
+  emit('saved')
 }
 </script>
+
 <style scoped>
 .persona-editor { display: flex; flex-direction: column; gap: 24px; }
 .setting-section {}

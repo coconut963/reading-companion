@@ -5,11 +5,14 @@
         <span class="popup-title">¶{{ annotation.paragraphIndex + 1 }} 批注讨论</span>
         <button class="popup-close" @click="$emit('close')">✕</button>
       </header>
+
       <div class="popup-annotation">
         <span class="ann-label">{{ characterName }} 的批注：</span>
         <p class="ann-content">{{ annotation.content }}</p>
       </div>
+
       <hr class="rule-thin" />
+
       <div class="popup-chat" ref="chatBox">
         <div class="chat-msg" v-for="(msg, idx) in discussion" :key="idx" :class="msg.role">
           <div class="msg-meta">
@@ -28,11 +31,17 @@
           </div>
           <p v-else class="msg-text">{{ msg.content }}</p>
         </div>
-        <div v-if="replying" class="chat-msg assistant">
+
+        <div v-if="replying && streamingReply" class="chat-msg assistant">
           <span class="msg-role">{{ characterName }}</span>
           <p class="msg-text">{{ streamingReply }}<span class="cursor-blink">|</span></p>
         </div>
+        <div v-else-if="replying" class="chat-msg assistant">
+          <span class="msg-role">{{ characterName }}</span>
+          <p class="msg-text msg-loading">……</p>
+        </div>
       </div>
+
       <div class="popup-input-row">
         <input class="popup-input" v-model="userInput" placeholder="就这条批注聊点什么…"
           @keydown.enter="sendMessage" :disabled="replying" />
@@ -41,16 +50,19 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted, nextTick, reactive } from 'vue'
 import { db, getSetting } from '../db/database.js'
 import { streamChat } from '../services/llmApi.js'
 import { getPreviousMemories } from '../services/memoryService.js'
+
 const props = defineProps({
   annotation: Object, paragraphText: String,
   book: Object, chapter: Object, allParagraphs: Array
 })
 const emit = defineEmits(['close', 'updated'])
+
 const discussion = ref([])
 const userInput = ref('')
 const replying = ref(false)
@@ -64,6 +76,7 @@ let dragging = false
 let dragOffset = { x: 0, y: 0 }
 const editingIdx = ref(-1)
 const editMsgText = ref('')
+
 onMounted(async () => {
   await nextTick()
   if (popupEl.value) {
@@ -80,12 +93,14 @@ onMounted(async () => {
   }
   scrollChat()
 })
+
 function startDrag(e) {
   dragging = true; dragOffset.x = e.clientX - pos.x; dragOffset.y = e.clientY - pos.y
   const onMove = (ev) => { if (!dragging) return; pos.x = ev.clientX - dragOffset.x; pos.y = ev.clientY - dragOffset.y }
   const onUp = () => { dragging = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
   document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp)
 }
+
 function startEditMsg(idx) { editingIdx.value = idx; editMsgText.value = discussion.value[idx].content }
 function cancelEditMsg() { editingIdx.value = -1; editMsgText.value = '' }
 async function confirmEditMsg(idx) {
@@ -96,17 +111,23 @@ async function deleteMsg(idx) {
   if (!confirm('确定删除这条消息？')) return
   discussion.value.splice(idx, 1); await saveDiscussion()
 }
+
 async function sendMessage() {
   const text = userInput.value.trim()
   if (!text || replying.value) return
   discussion.value.push({ role: 'user', content: text })
   userInput.value = ''; replying.value = true; streamingReply.value = ''
   await nextTick(); scrollChat()
+
   try {
     const settings = await getSetting('appSettings')
     const persona = await getSetting('personaSettings')
     const messages = await buildMessages(settings, persona)
-    const config = { baseURL: settings.baseURL, apiKey: settings.apiKey, model: settings.model, temperature: 0.7, maxTokens: 2048 }
+    const config = { 
+      baseURL: settings.baseURL, apiKey: settings.apiKey, 
+      model: settings.model, temperature: 0.7, maxTokens: 2048,
+      streamSpeed: settings.streamSpeed || 'normal'
+    }
     await streamChat(config, messages, chunk => { streamingReply.value += chunk; scrollChat() })
     discussion.value.push({ role: 'assistant', content: streamingReply.value })
     await saveDiscussion()
@@ -114,6 +135,7 @@ async function sendMessage() {
     if (e.name !== 'AbortError') discussion.value.push({ role: 'assistant', content: `[错误] ${e.message}` })
   } finally { replying.value = false; streamingReply.value = '' }
 }
+
 async function buildMessages(settings, persona) {
   const messages = []
   if (persona?.worldBook) {
@@ -143,13 +165,16 @@ async function buildMessages(settings, persona) {
   for (const msg of discussion.value) messages.push({ role: msg.role === 'user' ? 'user' : 'assistant', content: msg.content })
   return messages
 }
+
 async function saveDiscussion() {
   if (!props.annotation.dbId) return
   await db.annotations.update(props.annotation.dbId, { discussion: discussion.value.map(m => ({ role: m.role, content: m.content })) })
   emit('updated')
 }
+
 function scrollChat() { setTimeout(() => { if (chatBox.value) chatBox.value.scrollTop = chatBox.value.scrollHeight }, 0) }
 </script>
+
 <style scoped>
 .popup-wrapper { position: fixed; inset: 0; z-index: 150; pointer-events: none; }
 .popup-frame {
@@ -186,6 +211,7 @@ function scrollChat() { setTimeout(() => { if (chatBox.value) chatBox.value.scro
 .msg-text { font-size: 13px; line-height: 1.7; margin-top: 2px; padding: 6px 10px; border: 1px solid var(--line); }
 .chat-msg.user .msg-text { border-color: var(--line); background: var(--paper-deep); }
 .chat-msg.assistant .msg-text { border-color: var(--accent); }
+.msg-loading { color: var(--ink-soft); font-style: italic; }
 .msg-edit-box { margin-top: 4px; }
 .msg-edit-input { width: 100%; font-family: inherit; font-size: 12px; line-height: 1.6; padding: 5px 8px; border: 1px solid var(--accent); background: var(--paper); color: var(--ink); resize: vertical; }
 .msg-edit-input:focus { outline: none; }

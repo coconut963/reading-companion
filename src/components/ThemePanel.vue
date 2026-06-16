@@ -17,6 +17,7 @@
         </button>
       </div>
     </section>
+
     <!-- 字号 & 行距 -->
     <section class="setting-section">
       <h3 class="section-title">排版</h3>
@@ -42,6 +43,7 @@
         </label>
       </div>
     </section>
+
     <!-- 字体管理 -->
     <section class="setting-section">
       <h3 class="section-title">字体管理</h3>
@@ -77,46 +79,29 @@
         </label>
       </div>
     </section>
+
     <div class="save-row">
       <button class="action-btn primary" @click="save">应用设置</button>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { db, getSetting, setSetting } from '../db/database.js'
+import { applyTheme } from '../services/themeService.js'
+
+const emit = defineEmits(['saved'])
+
 const themes = [
-  {
-    id: 'vintage',
-    name: '复古纸',
-    preview: { background: '#f4f1eb', border: '2px solid #8b7355', color: '#2f2a22' }
-  },
-  {
-    id: 'light',
-    name: '素白',
-    preview: { background: '#fafafa', border: '2px solid #1a1a1a', color: '#1a1a1a' }
-  },
-  {
-    id: 'dark',
-    name: '夜间',
-    preview: { background: '#181818', border: '2px solid #c9a96e', color: '#e8e0d4' }
-  },
-  {
-    id: 'sepia',
-    name: '暖黄',
-    preview: { background: '#f5e6c8', border: '2px solid #a0845c', color: '#3a2e1e' }
-  },
-  {
-    id: 'green-light',
-    name: '浅绿',
-    preview: { background: '#f2ede5', border: '2px solid #4a5c3f', color: '#2a3322' }
-  },
-  {
-    id: 'green-dark',
-    name: '墨绿',
-    preview: { background: '#1f2a1e', border: '2px solid #7a9a6a', color: '#e0ddd4' }
-  }
+  { id: 'vintage', name: '复古纸', preview: { background: '#f4f1eb', border: '2px solid #8b7355', color: '#2f2a22' } },
+  { id: 'light', name: '素白', preview: { background: '#fafafa', border: '2px solid #1a1a1a', color: '#1a1a1a' } },
+  { id: 'dark', name: '夜间', preview: { background: '#181818', border: '2px solid #c9a96e', color: '#e8e0d4' } },
+  { id: 'sepia', name: '暖黄', preview: { background: '#f5e6c8', border: '2px solid #a0845c', color: '#3a2e1e' } },
+  { id: 'green-light', name: '浅绿', preview: { background: '#f2ede5', border: '2px solid #4a5c3f', color: '#2a3322' } },
+  { id: 'green-dark', name: '墨绿', preview: { background: '#1f2a1e', border: '2px solid #7a9a6a', color: '#e0ddd4' } }
 ]
+
 const form = ref({
   theme: 'vintage',
   fontSize: 15,
@@ -126,20 +111,21 @@ const form = ref({
   bodyFont: '',
   annFont: ''
 })
+
 const fonts = ref([])
+
 onMounted(async () => {
   const saved = await getSetting('themeSettings')
   if (saved) Object.assign(form.value, saved)
   await loadFonts()
-  applyTheme(form.value)
 })
+
 async function loadFonts() {
   const allFonts = await db.fonts.toArray()
   fonts.value = allFonts
-  for (const f of allFonts) {
-    registerFontFace(f)
-  }
+  for (const f of allFonts) registerFontFace(f)
 }
+
 function registerFontFace(f) {
   try {
     const existing = document.querySelector(`style[data-font-id="${f.id}"]`)
@@ -158,6 +144,7 @@ function registerFontFace(f) {
     console.warn('字体注册失败:', e)
   }
 }
+
 async function handleFontUpload(e) {
   const files = e.target.files
   if (!files.length) return
@@ -169,19 +156,14 @@ async function handleFontUpload(e) {
     const dataUrl = await fileToDataUrl(file)
     const baseName = file.name.replace(/\.[^.]+$/, '')
     const familyName = `custom-${baseName}-${Date.now()}`
-    const id = await db.fonts.add({
-      name: baseName,
-      familyName,
-      format,
-      dataUrl,
-      createdAt: Date.now()
-    })
+    const id = await db.fonts.add({ name: baseName, familyName, format, dataUrl, createdAt: Date.now() })
     const fontRecord = { id, name: baseName, familyName, format, dataUrl }
     fonts.value.push(fontRecord)
     registerFontFace(fontRecord)
   }
   e.target.value = ''
 }
+
 async function deleteFont(f) {
   if (!confirm(`确定删除字体「${f.name}」？`)) return
   await db.fonts.delete(f.id)
@@ -191,55 +173,13 @@ async function deleteFont(f) {
   if (form.value.bodyFont === f.familyName) form.value.bodyFont = ''
   if (form.value.annFont === f.familyName) form.value.annFont = ''
 }
+
 async function save() {
   await setSetting('themeSettings', { ...form.value })
   applyTheme(form.value)
+  emit('saved')
 }
-function applyTheme(cfg) {
-  const root = document.documentElement
-  const themeVars = {
-    vintage: {
-      '--paper': '#f4f1eb', '--paper-deep': '#ece7dd', '--ink': '#2f2a22',
-      '--ink-soft': '#8b8579', '--line': '#d5cfc4', '--line-strong': '#8b7355',
-      '--accent': '#8b7355', '--close-hover': '#8c3b2e'
-    },
-    light: {
-      '--paper': '#fafafa', '--paper-deep': '#f0f0f0', '--ink': '#1a1a1a',
-      '--ink-soft': '#666666', '--line': '#e0e0e0', '--line-strong': '#333333',
-      '--accent': '#1a1a1a', '--close-hover': '#333333'
-    },
-    dark: {
-      '--paper': '#181818', '--paper-deep': '#222222', '--ink': '#e8e0d4',
-      '--ink-soft': '#8a8078', '--line': '#333333', '--line-strong': '#555555',
-      '--accent': '#c9a96e', '--close-hover': '#b44'
-    },
-    sepia: {
-      '--paper': '#f5e6c8', '--paper-deep': '#eedcb3', '--ink': '#3a2e1e',
-      '--ink-soft': '#8a7a60', '--line': '#d4c4a0', '--line-strong': '#a0845c',
-      '--accent': '#a0845c', '--close-hover': '#8c3b2e'
-    },
-    'green-light': {
-      '--paper': '#f2ede5', '--paper-deep': '#e8e2d8', '--ink': '#2a3322',
-      '--ink-soft': '#6b7a5e', '--line': '#d4cfc4', '--line-strong': '#4a5c3f',
-      '--accent': '#4a5c3f', '--close-hover': '#6b4c3a'
-    },
-    'green-dark': {
-      '--paper': '#1f2a1e', '--paper-deep': '#263225', '--ink': '#e0ddd4',
-      '--ink-soft': '#8a9a7e', '--line': '#3a4a35', '--line-strong': '#5a7a50',
-      '--accent': '#7a9a6a', '--close-hover': '#b44'
-    }
-  }
-  const vars = themeVars[cfg.theme] || themeVars.vintage
-  for (const [k, v] of Object.entries(vars)) {
-    root.style.setProperty(k, v)
-  }
-  root.style.setProperty('--font-size-body', cfg.fontSize + 'px')
-  root.style.setProperty('--line-height-body', cfg.lineHeight)
-  root.style.setProperty('--font-size-annotation', cfg.annFontSize + 'px')
-  root.style.setProperty('--color-annotation', cfg.annColor)
-  root.style.setProperty('--font-body', cfg.bodyFont || "'Noto Serif SC', 'Source Han Serif CN', Georgia, serif")
-  root.style.setProperty('--font-annotation', cfg.annFont || "'Noto Serif SC', 'Source Han Serif CN', Georgia, serif")
-}
+
 function fileToDataUrl(file) {
   return new Promise((resolve) => {
     const reader = new FileReader()
@@ -248,24 +188,20 @@ function fileToDataUrl(file) {
   })
 }
 </script>
+
 <style scoped>
 .theme-panel { display: flex; flex-direction: column; gap: 24px; }
 .setting-section {}
 .section-title { font-size: 14px; font-weight: normal; letter-spacing: 0.2em; margin-bottom: 8px; }
-/* 主题网格 */
 .theme-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .theme-card {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 8px; border: 2px solid transparent; cursor: pointer;
-  transition: border-color 0.2s;
+  padding: 8px; border: 2px solid transparent; cursor: pointer; transition: border-color 0.2s;
 }
 .theme-card:hover { border-color: var(--line); }
 .theme-card.active { border-color: var(--accent); }
-.theme-preview {
-  width: 56px; height: 40px; border-radius: 2px;
-}
+.theme-preview { width: 56px; height: 40px; border-radius: 2px; }
 .theme-name { font-size: 11px; color: var(--ink-soft); }
-/* 字段 */
 .field { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .field-label { font-size: 12px; color: var(--ink-soft); }
 .field-input {
@@ -276,24 +212,15 @@ function fileToDataUrl(file) {
 .field-row { display: flex; gap: 12px; }
 .field.half { flex: 1; }
 .color-input { padding: 2px; height: 32px; cursor: pointer; }
-/* 字体上传 */
-.font-upload {
-  display: flex; align-items: center; gap: 12px; margin-top: 8px;
-}
+.font-upload { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .upload-btn {
   font-size: 12px; padding: 4px 12px;
   border: 1px dashed var(--line); color: var(--ink-soft); cursor: pointer;
 }
 .upload-btn:hover { border-color: var(--accent); color: var(--accent); }
 .upload-hint { font-size: 11px; color: var(--ink-soft); }
-.font-list {
-  display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
-  max-height: 150px; overflow-y: auto;
-}
-.font-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 4px 8px; border: 1px solid var(--line);
-}
+.font-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; max-height: 150px; overflow-y: auto; }
+.font-item { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border: 1px solid var(--line); }
 .font-preview { font-size: 14px; flex: 1; }
 .font-name { font-size: 11px; color: var(--ink-soft); }
 .act-btn { font-size: 12px; color: var(--ink-soft); padding: 2px 5px; opacity: 0.4; transition: opacity 0.2s; }

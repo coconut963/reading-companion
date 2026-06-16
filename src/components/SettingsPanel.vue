@@ -29,13 +29,8 @@
         </select>
         <p v-if="fetchError" class="fetch-error">{{ fetchError }}</p>
       </label>
-      <div class="test-row">
-        <button class="test-btn" @click="testApi" :disabled="testing">
-          {{ testing ? '测试中…' : '测试连接' }}
-        </button>
-        <p class="test-result" v-if="testResult" :class="{ error: testError }">{{ testResult }}</p>
-      </div>
     </section>
+
     <!-- 上下文开关 -->
     <section class="setting-section">
       <h3 class="section-title">上下文设置</h3>
@@ -57,6 +52,7 @@
         <span>评论区带入本章批注内容</span>
       </label>
     </section>
+
     <!-- 阅读设置 -->
     <section class="setting-section">
       <h3 class="section-title">阅读设置</h3>
@@ -65,16 +61,41 @@
         <span class="field-label">章节分片字数（0 = 不分片，按段落边界切割）</span>
         <input class="field-input" v-model.number="form.fragmentSize" type="number" step="500" min="0" placeholder="0" />
       </label>
+      <label class="field">
+        <span class="field-label">流式输出速度</span>
+        <div class="speed-options">
+          <button
+            class="speed-btn"
+            :class="{ active: form.streamSpeed === 'fast' }"
+            @click="form.streamSpeed = 'fast'"
+          >快</button>
+          <button
+            class="speed-btn"
+            :class="{ active: form.streamSpeed === 'normal' }"
+            @click="form.streamSpeed = 'normal'"
+          >中</button>
+          <button
+            class="speed-btn"
+            :class="{ active: form.streamSpeed === 'slow' }"
+            @click="form.streamSpeed = 'slow'"
+          >慢</button>
+        </div>
+        <span class="field-hint">控制批注、对话的逐字输出节奏</span>
+      </label>
     </section>
+
     <div class="save-row">
       <button class="action-btn primary" @click="save">保存设置</button>
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getSetting, setSetting } from '../db/database.js'
-import { streamChat } from '../services/llmApi.js'
+
+const emit = defineEmits(['saved'])
+
 const form = ref({
   baseURL: 'https://api.openai.com',
   apiKey: '',
@@ -82,23 +103,24 @@ const form = ref({
   contextRange: 'nearby',
   discussionInComment: false,
   annotationsInComment: true,
-  fragmentSize: 0
+  fragmentSize: 0,
+  streamSpeed: 'normal'
 })
-const testing = ref(false)
-const testResult = ref('')
-const testError = ref(false)
+
 const modelList = ref([])
 const fetchingModels = ref(false)
 const fetchError = ref('')
+
 onMounted(async () => {
   const saved = await getSetting('appSettings')
   if (saved) Object.assign(form.value, saved)
 })
+
 async function save() {
   await setSetting('appSettings', { ...form.value })
-  await setSetting('fragmentSize', form.value.fragmentSize || 0)
-  alert('设置已保存')
+  emit('saved')
 }
+
 async function fetchModels() {
   fetchingModels.value = true
   fetchError.value = ''
@@ -122,39 +144,15 @@ async function fetchModels() {
     fetchingModels.value = false
   }
 }
-async function testApi() {
-  testing.value = true
-  testResult.value = ''
-  testError.value = false
-  try {
-    const config = {
-      baseURL: form.value.baseURL,
-      apiKey: form.value.apiKey,
-      model: form.value.model,
-      temperature: 0.7,
-      maxTokens: 32
-    }
-    let reply = ''
-    await streamChat(
-      config,
-      [{ role: 'user', content: '请回复"连接成功"四个字。' }],
-      chunk => { reply += chunk }
-    )
-    testResult.value = '✓ 连接成功: ' + reply.slice(0, 50)
-  } catch (e) {
-    testError.value = true
-    testResult.value = '✗ ' + e.message
-  } finally {
-    testing.value = false
-  }
-}
 </script>
+
 <style scoped>
 .settings-panel { display: flex; flex-direction: column; gap: 24px; }
 .setting-section {}
 .section-title { font-size: 14px; font-weight: normal; letter-spacing: 0.2em; margin-bottom: 8px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .field-label { font-size: 12px; color: var(--ink-soft); }
+.field-hint { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
 .field-input {
   font-family: inherit; font-size: 13px; padding: 6px 8px;
   border: 1px solid var(--line); background: var(--paper); color: var(--ink);
@@ -174,14 +172,26 @@ async function testApi() {
   display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px;
 }
 .check-field input[type="checkbox"] { accent-color: var(--accent); }
-.test-row { margin-top: 12px; }
-.test-btn {
-  font-size: 13px; padding: 5px 16px; border: 1px solid var(--line-strong); letter-spacing: 0.1em;
+
+/* 速度选择 */
+.speed-options {
+  display: flex; gap: 0;
 }
-.test-btn:hover:not(:disabled) { background: var(--paper-deep); }
-.test-btn:disabled { opacity: 0.5; }
-.test-result { font-size: 12px; margin-top: 6px; color: var(--accent); }
-.test-result.error { color: var(--close-hover); }
+.speed-btn {
+  font-size: 13px; padding: 5px 16px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  transition: all 0.2s;
+}
+.speed-btn:first-child { border-radius: 0; }
+.speed-btn:last-child { border-radius: 0; }
+.speed-btn + .speed-btn { border-left: none; }
+.speed-btn:hover { color: var(--ink); border-color: var(--accent); }
+.speed-btn.active {
+  background: var(--accent); color: var(--paper);
+  border-color: var(--accent);
+}
+
 .save-row { display: flex; justify-content: flex-end; }
 .action-btn {
   font-size: 13px; padding: 6px 18px; border: 1px solid var(--line-strong); letter-spacing: 0.1em;

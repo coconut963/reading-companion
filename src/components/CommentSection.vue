@@ -2,6 +2,7 @@
   <div class="comment-section">
     <hr class="rule-double" />
     <h3 class="comment-title">章末评论区</h3>
+
     <div class="comment-list" ref="commentList">
       <div
         class="comment-item"
@@ -25,11 +26,17 @@
         </div>
         <p v-else class="comment-text">{{ msg.content }}</p>
       </div>
-      <div v-if="replying" class="comment-item assistant">
+
+      <div v-if="replying && streamingReply" class="comment-item assistant">
         <span class="comment-role">{{ characterName }}</span>
         <p class="comment-text">{{ streamingReply }}<span class="cursor-blink">|</span></p>
       </div>
+      <div v-else-if="replying" class="comment-item assistant">
+        <span class="comment-role">{{ characterName }}</span>
+        <p class="comment-text comment-loading">……</p>
+      </div>
     </div>
+
     <div class="comment-input-row">
       <input
         class="comment-input"
@@ -42,15 +49,18 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { db, getSetting } from '../db/database.js'
 import { streamChat } from '../services/llmApi.js'
+
 const props = defineProps({
   book: Object,
   chapter: Object,
   annotations: Array
 })
+
 const comments = ref([])
 const userInput = ref('')
 const replying = ref(false)
@@ -61,31 +71,37 @@ const userName = ref('你')
 const editing = ref(false)
 const editIdx = ref(-1)
 const editText = ref('')
+
 async function loadNames() {
   const persona = await getSetting('personaSettings')
   if (persona?.personaName) characterName.value = persona.personaName
   if (persona?.userName) userName.value = persona.userName
 }
+
 onMounted(async () => {
   await loadNames()
   loadComments()
 })
+
 watch(() => props.chapter, async () => {
   await loadNames()
   loadComments()
 })
+
 async function loadComments() {
   if (!props.chapter) { comments.value = []; return }
   const saved = await db.comments.where('chapterId').equals(props.chapter.id).toArray()
   saved.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
   comments.value = saved.map(c => ({ role: c.role, content: c.content, dbId: c.id }))
 }
+
 async function deleteComment(idx) {
   if (!confirm('确定删除这条评论？')) return
   const msg = comments.value[idx]
   if (msg.dbId) await db.comments.delete(msg.dbId)
   comments.value.splice(idx, 1)
 }
+
 function startEdit(idx) { editing.value = true; editIdx.value = idx; editText.value = comments.value[idx].content }
 function cancelEdit() { editing.value = false; editIdx.value = -1; editText.value = '' }
 async function confirmEdit(idx) {
@@ -95,6 +111,7 @@ async function confirmEdit(idx) {
   if (comments.value[idx].dbId) await db.comments.update(comments.value[idx].dbId, { content: newText })
   cancelEdit()
 }
+
 async function sendComment() {
   const text = userInput.value.trim()
   if (!text || replying.value) return
@@ -108,13 +125,15 @@ async function sendComment() {
   streamingReply.value = ''
   await nextTick()
   scrollBottom()
+
   try {
     const settings = await getSetting('appSettings')
     const persona = await getSetting('personaSettings')
     const messages = buildMessages(settings, persona)
     const config = {
       baseURL: settings.baseURL, apiKey: settings.apiKey,
-      model: settings.model, temperature: 0.7, maxTokens: 2048
+      model: settings.model, temperature: 0.7, maxTokens: 2048,
+      streamSpeed: settings.streamSpeed || 'normal'
     }
     await streamChat(config, messages, chunk => { streamingReply.value += chunk; scrollBottom() })
     const reply = streamingReply.value
@@ -127,6 +146,7 @@ async function sendComment() {
     if (e.name !== 'AbortError') comments.value.push({ role: 'assistant', content: `[错误] ${e.message}` })
   } finally { replying.value = false; streamingReply.value = '' }
 }
+
 function buildMessages(settings, persona) {
   const messages = []
   if (persona?.worldBook) {
@@ -157,10 +177,12 @@ function buildMessages(settings, persona) {
   }
   return messages
 }
+
 function scrollBottom() {
   setTimeout(() => { if (commentList.value) commentList.value.scrollTop = commentList.value.scrollHeight }, 0)
 }
 </script>
+
 <style scoped>
 .comment-section { margin-top: 32px; }
 .comment-title {
@@ -179,10 +201,7 @@ function scrollBottom() {
 .comment-item.user .comment-meta { flex-direction: row-reverse; }
 .comment-role { font-size: 10px; color: var(--ink-soft); letter-spacing: 0.1em; }
 .comment-actions { display: flex; gap: 2px; }
-.act-btn {
-  font-size: 11px; color: var(--ink-soft); padding: 1px 4px;
-  opacity: 0.4; transition: opacity 0.2s;
-}
+.act-btn { font-size: 11px; color: var(--ink-soft); padding: 1px 4px; opacity: 0.4; transition: opacity 0.2s; }
 .act-btn:hover { opacity: 1; color: var(--accent); }
 .comment-text {
   font-size: 14px; line-height: 1.8; margin-top: 2px;
@@ -190,6 +209,7 @@ function scrollBottom() {
 }
 .comment-item.user .comment-text { background: var(--paper-deep); }
 .comment-item.assistant .comment-text { border-color: var(--accent); }
+.comment-loading { color: var(--ink-soft); font-style: italic; }
 .edit-box { margin-top: 4px; }
 .edit-input {
   width: 100%; font-family: inherit; font-size: 13px; line-height: 1.7;
@@ -198,9 +218,7 @@ function scrollBottom() {
 }
 .edit-input:focus { outline: none; }
 .edit-actions { display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end; }
-.action-btn {
-  font-size: 12px; padding: 4px 12px; border: 1px solid var(--line-strong); letter-spacing: 0.05em;
-}
+.action-btn { font-size: 12px; padding: 4px 12px; border: 1px solid var(--line-strong); letter-spacing: 0.05em; }
 .action-btn:hover { background: var(--paper-deep); }
 .action-btn.primary { background: var(--line-strong); color: var(--paper); }
 .action-btn.primary:hover { background: var(--ink); }
@@ -216,10 +234,7 @@ function scrollBottom() {
   background: var(--paper); color: var(--ink);
 }
 .comment-input:focus { outline: none; border-color: var(--accent); }
-.send-btn {
-  font-size: 13px; padding: 6px 14px;
-  border: 1px solid var(--accent); color: var(--accent);
-}
+.send-btn { font-size: 13px; padding: 6px 14px; border: 1px solid var(--accent); color: var(--accent); }
 .send-btn:hover:not(:disabled) { background: var(--accent); color: var(--paper); }
 .send-btn:disabled { opacity: 0.4; }
 </style>

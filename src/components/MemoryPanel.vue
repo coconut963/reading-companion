@@ -141,11 +141,9 @@ async function generateMemory(ch) {
       }
     ]
     const config = {
-      baseURL: settings.baseURL,
-      apiKey: settings.apiKey,
-      model: settings.model,
-      temperature: 0.3,
-      maxTokens: 1024
+      baseURL: settings.baseURL, apiKey: settings.apiKey,
+      model: settings.model, temperature: 0.3, maxTokens: 1024,
+      streamSpeed: settings.streamSpeed || 'normal'
     }
     let result = ''
     await streamChat(config, messages, chunk => { result += chunk })
