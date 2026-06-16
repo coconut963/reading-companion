@@ -157,7 +157,7 @@ function buildMessages(settings, persona) {
   if (persona?.persona) sys += persona.persona + '\n\n'
   if (persona?.userMask) sys += `[关于用户] ${persona.userMask}\n\n`
   sys += `你刚读完《${props.book.title}》的章节「${props.chapter.title}」。`
-  sys += `用户想在评论区和你聊聊这章的感想。请以角色身份自然地交流。\n\n`
+  sys += `用户想在评论区和你聊聊这章的感想。请以角色身份自然地交流。不需要动作描写。\n\n`
   if (settings?.annotationsInComment && props.annotations?.length) {
     const annText = props.annotations.map(a => `¶${a.paragraphIndex + 1}: ${a.content}`).join('\n')
     sys += `[你在这章写的批注]\n${annText}\n\n`

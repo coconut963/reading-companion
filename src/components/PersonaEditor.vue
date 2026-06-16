@@ -57,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, toRaw } from 'vue'
 import { getSetting, setSetting } from '../db/database.js'
 
 const emit = defineEmits(['saved'])
@@ -84,7 +84,8 @@ function removeWbEntry(idx) {
 }
 
 async function save() {
-  await setSetting('personaSettings', { ...form.value, worldBook: [...form.value.worldBook] })
+  const raw = JSON.parse(JSON.stringify(toRaw(form.value)))
+  await setSetting('personaSettings', raw)
   emit('saved')
 }
 </script>

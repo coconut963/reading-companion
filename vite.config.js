@@ -50,7 +50,7 @@ export default defineConfig({
       }
     })
   ],
-  base: './',
+  base: '/reading-companion/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets'

@@ -151,7 +151,7 @@ async function buildMessages(settings, persona) {
   if (persona?.persona) sys += persona.persona + '\n\n'
   if (persona?.userMask) sys += `[关于用户] ${persona.userMask}\n\n`
   sys += `你正在阅读《${props.book.title}》「${props.chapter.title}」。`
-  sys += `用户想就你的一条批注和你聊聊。请以角色身份自然地回应。\n\n`
+  sys += `用户想就你的一条批注和你聊聊。请以角色身份自然地回应，不需要对角色进行动作描写，用角色的口吻回复。\n\n`
   if (contextRange === 'nearby') {
     const idx = props.annotation.paragraphIndex
     const paras = props.allParagraphs || []
