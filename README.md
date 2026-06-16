@@ -19,7 +19,7 @@ AI 共读批注系统 —— 让 AI 角色为你的书写下批注，与你一�
 
 ### 浏览器直接使用
 
-访问在线版：[GitHub Pages 地址]（部署后填入）
+访问在线版： https://coconut963.github.io/reading-companion/
 
 > 所有数据保存在浏览器本地（IndexedDB），不上传任何内容到服务器。
 
@@ -28,18 +28,6 @@ AI 共读批注系统 —— 让 AI 角色为你的书写下批注，与你一�
 从 [Releases](https://github.com/coconut963/reading-companion/releases) 下载：
 - `共读-x.x.x-setup.exe` — 安装版
 - `共读-x.x.x-portable.exe` — 免安装便携版
-
-### macOS
-
-从 [Releases](https://github.com/coconut963/reading-companion/releases) 下载 `.dmg` 文件。
-
-> ⚠️ macOS 构建需要在 Mac 上进行，如果你在 Windows 上开发，可以使用 GitHub Actions 自动构建。
-
-### Linux
-
-从 [Releases](https://github.com/coconut963/reading-companion/releases) 下载：
-- `.AppImage` — 双击运行
-- `.tar.gz` — 解压后运行
 
 ## 🔧 开发
 
